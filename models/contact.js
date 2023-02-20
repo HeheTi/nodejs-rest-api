@@ -1,4 +1,6 @@
 const { Schema, model } = require("mongoose");
+const { mongooseHandleError } = require("../helpers");
+const { EMAIL_REG_EXP } = require("../helpers/constants");
 
 const contactSchema = new Schema(
   {
@@ -8,6 +10,7 @@ const contactSchema = new Schema(
     },
     email: {
       type: String,
+      match: EMAIL_REG_EXP,
     },
     phone: {
       type: String,
@@ -16,16 +19,17 @@ const contactSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    owner: {
+      type: Schema.Types.ObjectId,
+      ref: "user",
+    },
   },
   {
     versionKey: false,
   }
 );
 
-contactSchema.post("save", (error, data, next) => {
-  error.status = 400;
-  next();
-});
+contactSchema.post("save", mongooseHandleError);
 
 const Contact = model("contact", contactSchema);
 

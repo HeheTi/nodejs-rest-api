@@ -1,71 +1,91 @@
-const Contact = require("../models/contact");
-
 const { HttpError, ctrlWrapper } = require("../helpers");
+const {
+  getAllContatcts,
+  getContactById,
+  addContact,
+  deleteContact,
+  changeContact,
+  updateContactFavorive,
+} = require("../services/contactsService");
 
-const getAllContatcts = async (req, res) => {
-  const result = await Contact.find();
-  res.json(result);
+const getAllContatctsController = async (req, res) => {
+  const { _id: owner } = req.user;
+  let { page = 1, limit = 20, favorite = null } = req.query;
+  limit = limit > 100 ? 100 : limit;
+  const skip = (+page - 1) * +limit;
+
+  let dataByFind = { owner };
+
+  if (favorite !== null) {
+    dataByFind = { ...dataByFind, favorite };
+  }
+
+  const contacts = await getAllContatcts(dataByFind, skip, limit);
+  res.json({ contacts, page, limit });
 };
 
-const getContactById = async (req, res) => {
+const getContactByIdController = async (req, res) => {
   const { contactId } = req.params;
-  const contact = await Contact.findById(contactId);
+  const { _id: owner } = req.user;
+  const contact = await getContactById(contactId, owner);
   if (!contact) {
     throw HttpError(404, `Book with ${contactId} not found`);
   }
   res.json(contact);
 };
 
-const addContact = async (req, res) => {
-  if (!Object.keys(req.body).length) {
-    throw HttpError(400, "missing required name field");
-  }
-  const newContact = await Contact.create(req.body);
+const addContactController = async (req, res) => {
+  const { _id: owner } = req.user;
+  const newContact = await addContact({ ...req.body, owner });
   res.status(201).json(newContact);
 };
 
-const deleteContact = async (req, res) => {
+const deleteContactController = async (req, res) => {
   const { contactId } = req.params;
-  const result = await Contact.findByIdAndRemove(contactId);
-  if (!result) {
+  const { _id: owner } = req.user;
+
+  const removedContact = await deleteContact(contactId, owner);
+  if (!removedContact) {
     throw HttpError(404);
   }
   res.json({ message: "contact deleted" });
 };
 
-const changeContact = async (req, res) => {
+const changeContactController = async (req, res) => {
   if (!Object.keys(req.body).length) {
     throw HttpError(400, "missing fields");
   }
   const { contactId } = req.params;
-  const result = await Contact.findByIdAndUpdate(contactId, req.body, {
-    new: true,
-  });
-  if (!result) {
+  const { _id: owner } = req.user;
+  const updatedContact = await changeContact(contactId, owner, req.body);
+  if (!updatedContact) {
     throw HttpError(404);
   }
-  res.json(result);
+  res.json(updatedContact);
 };
 
-const updateContactFavorive = async (req, res) => {
+const updateContactFavoriveController = async (req, res) => {
   if (!Object.keys(req.body).length) {
     throw HttpError(400, "missing field favorite");
   }
   const { contactId } = req.params;
-  const result = await Contact.findByIdAndUpdate(contactId, req.body, {
-    new: true,
-  });
-  if (!result) {
+  const { _id: owner } = req.user;
+  const updatedFavorive = await updateContactFavorive(
+    contactId,
+    owner,
+    req.body
+  );
+  if (!updatedFavorive) {
     throw HttpError(404);
   }
-  res.json(result);
+  res.json(updatedFavorive);
 };
 
 module.exports = {
-  getAllContatcts: ctrlWrapper(getAllContatcts),
-  getContactById: ctrlWrapper(getContactById),
-  addContact: ctrlWrapper(addContact),
-  deleteContact: ctrlWrapper(deleteContact),
-  changeContact: ctrlWrapper(changeContact),
-  updateContactFavorive: ctrlWrapper(updateContactFavorive),
+  getAllContatctsController: ctrlWrapper(getAllContatctsController),
+  getContactByIdController: ctrlWrapper(getContactByIdController),
+  addContactController: ctrlWrapper(addContactController),
+  deleteContactController: ctrlWrapper(deleteContactController),
+  changeContactController: ctrlWrapper(changeContactController),
+  updateContactFavoriveController: ctrlWrapper(updateContactFavoriveController),
 };
