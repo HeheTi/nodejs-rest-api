@@ -34,10 +34,23 @@ const updateSubscriptionUser = async (id, subscription) => {
   return updatedUser;
 };
 
+const updateAvatar = async (id, avatarURL) => {
+  await User.findByIdAndUpdate(
+    id,
+    {
+      $set: { avatarURL },
+    },
+    {
+      new: true,
+    }
+  );
+};
+
 module.exports = {
   findUser,
   singUpUser,
   loginUser,
   logoutUser,
   updateSubscriptionUser,
+  updateAvatar,
 };

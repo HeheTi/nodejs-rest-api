@@ -1,5 +1,9 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const gravatar = require("gravatar");
+const Jimp = require("jimp");
+const fs = require("fs").promises;
+const path = require("path");
 const { ctrlWrapper, HttpError } = require("../helpers");
 const {
   findUser,
@@ -7,9 +11,11 @@ const {
   loginUser,
   logoutUser,
   updateSubscriptionUser,
+  updateAvatar,
 } = require("../services/usersService");
 
 const { SECRET_KEY } = process.env;
+const avatarDir = path.join(__dirname, "../", "public", "avatars");
 
 const singUpController = async (req, res) => {
   const { email, password } = req.body;
@@ -19,8 +25,9 @@ const singUpController = async (req, res) => {
   }
 
   const hashPassword = await bcrypt.hash(password, 10);
+  const avatarURL = gravatar.url(email, { s: "250" });
 
-  const result = await singUpUser({ email, password: hashPassword });
+  const result = await singUpUser({ email, password: hashPassword, avatarURL });
 
   res.status(201).json({
     user: { email: result.email, subscription: result.subscription },
@@ -52,6 +59,7 @@ const loginController = async (req, res) => {
     user: {
       email: loginedUser.email,
       subscription: loginedUser.subscription,
+      avatarURL: loginedUser.avatarURL,
     },
   });
 };
@@ -62,12 +70,13 @@ const logoutController = async (req, res) => {
 };
 
 const currentController = async (req, res) => {
-  const { email, subscription } = req.user;
+  const { email, subscription, avatarURL } = req.user;
 
   res.json({
     user: {
       email,
       subscription,
+      avatarURL,
     },
   });
 };
@@ -82,7 +91,32 @@ const updateSubscriptionController = async (req, res) => {
     user: {
       email,
       subscription,
+      avatarURL,
     },
+  });
+};
+const updateAvatarController = async (req, res) => {
+  if (!req.file) {
+    throw HttpError(400, "avatar must be exist");
+  }
+
+  const { path: tmpUpload, originalname } = req.file;
+  const { _id } = req.user;
+
+  const img = await Jimp.read(tmpUpload);
+  await img.resize(250, 250);
+  await img.writeAsync(tmpUpload);
+
+  const filename = `${_id}_${originalname}`;
+  const resultUpload = path.join(avatarDir, filename);
+
+  await fs.rename(tmpUpload, resultUpload);
+
+  const avatarURL = path.join("avatars", filename);
+  await updateAvatar(_id, avatarURL);
+
+  res.json({
+    avatarURL,
   });
 };
 
@@ -92,4 +126,5 @@ module.exports = {
   logoutController: ctrlWrapper(logoutController),
   currentController: ctrlWrapper(currentController),
   updateSubscriptionController: ctrlWrapper(updateSubscriptionController),
+  updateAvatarController: ctrlWrapper(updateAvatarController),
 };
