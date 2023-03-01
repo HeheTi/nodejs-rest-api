@@ -10,9 +10,9 @@ const singUpUser = async (data) => {
   return createdUser;
 };
 
-const loginUser = async (id, token) => {
+const loginUser = async (id, tokens) => {
   const loginedUser = await User.findByIdAndUpdate(id, {
-    $set: { token },
+    $set: { ...tokens },
   });
   return loginedUser;
 };
@@ -46,6 +46,18 @@ const updateAvatar = async (id, avatarURL) => {
   );
 };
 
+const refreshUser = async (id, tokens) => {
+  await User.findByIdAndUpdate(
+    id,
+    {
+      $set: { ...tokens },
+    },
+    {
+      new: true,
+    }
+  );
+};
+
 module.exports = {
   findUser,
   singUpUser,
@@ -53,4 +65,5 @@ module.exports = {
   logoutUser,
   updateSubscriptionUser,
   updateAvatar,
+  refreshUser,
 };

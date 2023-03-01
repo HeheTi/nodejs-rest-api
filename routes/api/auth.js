@@ -4,6 +4,7 @@ const { validateBody, authentication, upload } = require("../../middlewares");
 const {
   authSchema,
   changeSubscriptionSchema,
+  refreshSchema,
 } = require("../../schemas/authSchemas");
 
 const router = express.Router();
@@ -24,5 +25,7 @@ router.patch(
   upload.single("avatar"),
   ctrl.updateAvatarController
 );
+
+router.patch("/refresh", validateBody(refreshSchema), ctrl.refreshController);
 
 module.exports = router;

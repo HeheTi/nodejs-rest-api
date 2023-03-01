@@ -1,7 +1,6 @@
 const { Schema, model } = require("mongoose");
 const { mongooseHandleError } = require("../helpers");
 const { EMAIL_REG_EXP } = require("../helpers/constants");
-const gravatar = require("gravatar");
 
 const userSchema = new Schema(
   {
@@ -20,7 +19,11 @@ const userSchema = new Schema(
       enum: ["starter", "pro", "business"],
       default: "starter",
     },
-    token: {
+    accessToken: {
+      type: String,
+      default: null,
+    },
+    refreshToken: {
       type: String,
       default: null,
     },
