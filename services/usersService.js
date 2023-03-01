@@ -18,7 +18,9 @@ const loginUser = async (id, tokens) => {
 };
 
 const logoutUser = async (id) => {
-  await User.findByIdAndUpdate(id, { $set: { token: null } });
+  await User.findByIdAndUpdate(id, {
+    $set: { accessToken: null, refreshToken: null },
+  });
 };
 
 const updateSubscriptionUser = async (id, subscription) => {
