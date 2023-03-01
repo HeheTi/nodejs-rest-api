@@ -26,6 +26,6 @@ router.patch(
   ctrl.updateAvatarController
 );
 
-router.patch("/refresh", validateBody(refreshSchema), ctrl.refreshController);
+router.post("/refresh", validateBody(refreshSchema), ctrl.refreshController);
 
 module.exports = router;
