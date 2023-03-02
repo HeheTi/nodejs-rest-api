@@ -10,15 +10,17 @@ const singUpUser = async (data) => {
   return createdUser;
 };
 
-const loginUser = async (id, token) => {
+const loginUser = async (id, tokens) => {
   const loginedUser = await User.findByIdAndUpdate(id, {
-    $set: { token },
+    $set: { ...tokens },
   });
   return loginedUser;
 };
 
 const logoutUser = async (id) => {
-  await User.findByIdAndUpdate(id, { $set: { token: null } });
+  await User.findByIdAndUpdate(id, {
+    $set: { accessToken: null, refreshToken: null },
+  });
 };
 
 const updateSubscriptionUser = async (id, subscription) => {
@@ -34,10 +36,36 @@ const updateSubscriptionUser = async (id, subscription) => {
   return updatedUser;
 };
 
+const updateAvatar = async (id, avatarURL) => {
+  await User.findByIdAndUpdate(
+    id,
+    {
+      $set: { avatarURL },
+    },
+    {
+      new: true,
+    }
+  );
+};
+
+const refreshUser = async (id, tokens) => {
+  await User.findByIdAndUpdate(
+    id,
+    {
+      $set: { ...tokens },
+    },
+    {
+      new: true,
+    }
+  );
+};
+
 module.exports = {
   findUser,
   singUpUser,
   loginUser,
   logoutUser,
   updateSubscriptionUser,
+  updateAvatar,
+  refreshUser,
 };

@@ -10,4 +10,8 @@ const changeSubscriptionSchema = Joi.object({
   subscription: Joi.string().valid("starter", "pro", "business").required(),
 });
 
-module.exports = { authSchema, changeSubscriptionSchema };
+const refreshSchema = Joi.object({
+  refreshToken: Joi.string().required(),
+});
+
+module.exports = { authSchema, changeSubscriptionSchema, refreshSchema };

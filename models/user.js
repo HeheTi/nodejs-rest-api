@@ -19,9 +19,16 @@ const userSchema = new Schema(
       enum: ["starter", "pro", "business"],
       default: "starter",
     },
-    token: {
+    accessToken: {
       type: String,
       default: null,
+    },
+    refreshToken: {
+      type: String,
+      default: null,
+    },
+    avatarURL: {
+      type: String,
     },
   },
   {

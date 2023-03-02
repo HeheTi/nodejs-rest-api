@@ -1,15 +1,22 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { ctrlWrapper, HttpError } = require("../helpers");
+const { REFRESH_SECRET_KEY } = process.env;
+const gravatar = require("gravatar");
+const Jimp = require("jimp");
+const fs = require("fs").promises;
+const path = require("path");
+const { ctrlWrapper, HttpError, createTokens } = require("../helpers");
 const {
   findUser,
   singUpUser,
   loginUser,
   logoutUser,
   updateSubscriptionUser,
+  updateAvatar,
+  refreshUser,
 } = require("../services/usersService");
 
-const { SECRET_KEY } = process.env;
+const avatarDir = path.join(__dirname, "../", "public", "avatars");
 
 const singUpController = async (req, res) => {
   const { email, password } = req.body;
@@ -19,8 +26,9 @@ const singUpController = async (req, res) => {
   }
 
   const hashPassword = await bcrypt.hash(password, 10);
+  const avatarURL = gravatar.url(email, { s: "250" });
 
-  const result = await singUpUser({ email, password: hashPassword });
+  const result = await singUpUser({ email, password: hashPassword, avatarURL });
 
   res.status(201).json({
     user: { email: result.email, subscription: result.subscription },
@@ -39,19 +47,16 @@ const loginController = async (req, res) => {
     throw HttpError(401, "Email or password is wrong");
   }
 
-  const payload = {
-    id: user._id,
-  };
+  const tokens = createTokens(user._id);
 
-  const token = jwt.sign(payload, SECRET_KEY, { expiresIn: "23h" });
-
-  const loginedUser = await loginUser(user._id, token);
+  const loginedUser = await loginUser(user._id, tokens);
 
   res.json({
-    token,
+    ...tokens,
     user: {
       email: loginedUser.email,
       subscription: loginedUser.subscription,
+      avatarURL: loginedUser.avatarURL,
     },
   });
 };
@@ -62,12 +67,13 @@ const logoutController = async (req, res) => {
 };
 
 const currentController = async (req, res) => {
-  const { email, subscription } = req.user;
+  const { email, subscription, avatarURL } = req.user;
 
   res.json({
     user: {
       email,
       subscription,
+      avatarURL,
     },
   });
 };
@@ -82,7 +88,55 @@ const updateSubscriptionController = async (req, res) => {
     user: {
       email,
       subscription,
+      avatarURL,
     },
+  });
+};
+const updateAvatarController = async (req, res) => {
+  if (!req.file) {
+    throw HttpError(400, "avatar must be exist");
+  }
+
+  const { path: tmpUpload, originalname } = req.file;
+  const { _id } = req.user;
+
+  const img = await Jimp.read(tmpUpload);
+  await img.resize(250, 250);
+  await img.writeAsync(tmpUpload);
+
+  const filename = `${_id}_${originalname}`;
+  const resultUpload = path.join(avatarDir, filename);
+
+  await fs.rename(tmpUpload, resultUpload);
+
+  const avatarURL = path.join("avatars", filename);
+  await updateAvatar(_id, avatarURL);
+
+  res.json({
+    avatarURL,
+  });
+};
+
+const refreshController = async (req, res) => {
+  const { refreshToken: token } = req.body;
+  let tokens = {};
+  let userId = null;
+
+  try {
+    const { id } = jwt.verify(token, REFRESH_SECRET_KEY);
+    const user = await findUser({ _id: id });
+    if (!user || user.refreshToken !== token) {
+      throw HttpError(403);
+    }
+    userId = id;
+    tokens = createTokens(id);
+  } catch (error) {
+    throw HttpError(403, error.message);
+  }
+
+  await refreshUser(userId, tokens);
+  res.json({
+    ...tokens,
   });
 };
 
@@ -92,4 +146,6 @@ module.exports = {
   logoutController: ctrlWrapper(logoutController),
   currentController: ctrlWrapper(currentController),
   updateSubscriptionController: ctrlWrapper(updateSubscriptionController),
+  updateAvatarController: ctrlWrapper(updateAvatarController),
+  refreshController: ctrlWrapper(refreshController),
 };
