@@ -47,7 +47,7 @@ const singUpController = async (req, res) => {
   const verifyEmail = {
     to: email,
     subject: "Verify email",
-    html: `<a target="_blank" href="${BASE_URL}/api/auth/verify/${verificationCode}">Click verify email</a>`,
+    html: `<a target="_blank" href="${BASE_URL}/api/users/verify/${verificationCode}">Click verify email</a>`,
   };
 
   await sendEmail(verifyEmail)
@@ -171,7 +171,6 @@ const refreshController = async (req, res) => {
 
 const verifyController = async (req, res) => {
   const { verificationCode } = req.params;
-  console.log("🚀 ~ verificationCode:", verificationCode);
 
   const user = await findUser({ verificationCode });
   if (!user) {
@@ -199,7 +198,7 @@ const resendVerifyEmailController = async (req, res) => {
   const verifyEmail = {
     to: email,
     subject: "Verify email",
-    html: `<a target="_blank" href="${BASE_URL}/api/auth/verify/${user.verificationCode}">Click verify email</a>`,
+    html: `<a target="_blank" href="${BASE_URL}/api/users/verify/${user.verificationCode}">Click verify email</a>`,
   };
 
   await sendEmail(verifyEmail);
