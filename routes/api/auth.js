@@ -5,6 +5,7 @@ const {
   authSchema,
   changeSubscriptionSchema,
   refreshSchema,
+  resendVerifySchema,
 } = require("../../schemas/authSchemas");
 
 const router = express.Router();
@@ -27,5 +28,13 @@ router.patch(
 );
 
 router.post("/refresh", validateBody(refreshSchema), ctrl.refreshController);
+
+router.get("/verify/:verificationCode", ctrl.verifyController);
+
+router.post(
+  "/resend-verify-email",
+  validateBody(resendVerifySchema),
+  ctrl.resendVerifyEmailController
+);
 
 module.exports = router;

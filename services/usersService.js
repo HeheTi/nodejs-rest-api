@@ -60,6 +60,12 @@ const refreshUser = async (id, tokens) => {
   );
 };
 
+const verifyUser = async (id) => {
+  await User.findByIdAndUpdate(id, {
+    $set: { verify: true, verificationCode: "" },
+  });
+};
+
 module.exports = {
   findUser,
   singUpUser,
@@ -68,4 +74,5 @@ module.exports = {
   updateSubscriptionUser,
   updateAvatar,
   refreshUser,
+  verifyUser,
 };

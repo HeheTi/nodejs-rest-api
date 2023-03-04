@@ -1,11 +1,16 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { REFRESH_SECRET_KEY } = process.env;
+const { REFRESH_SECRET_KEY, BASE_URL } = process.env;
 const gravatar = require("gravatar");
 const Jimp = require("jimp");
 const fs = require("fs").promises;
 const path = require("path");
-const { ctrlWrapper, HttpError, createTokens } = require("../helpers");
+const {
+  ctrlWrapper,
+  HttpError,
+  createTokens,
+  sendEmail,
+} = require("../helpers");
 const {
   findUser,
   singUpUser,
@@ -14,7 +19,9 @@ const {
   updateSubscriptionUser,
   updateAvatar,
   refreshUser,
+  verifyUser,
 } = require("../services/usersService");
+const { nanoid } = require("nanoid");
 
 const avatarDir = path.join(__dirname, "../", "public", "avatars");
 
@@ -28,7 +35,24 @@ const singUpController = async (req, res) => {
   const hashPassword = await bcrypt.hash(password, 10);
   const avatarURL = gravatar.url(email, { s: "250" });
 
-  const result = await singUpUser({ email, password: hashPassword, avatarURL });
+  const verificationCode = nanoid();
+
+  const result = await singUpUser({
+    email,
+    password: hashPassword,
+    avatarURL,
+    verificationCode,
+  });
+
+  const verifyEmail = {
+    to: email,
+    subject: "Verify email",
+    html: `<a target="_blank" href="${BASE_URL}/api/users/verify/${verificationCode}">Click verify email</a>`,
+  };
+
+  await sendEmail(verifyEmail)
+    .then((email) => console.log(email))
+    .catch(console.log);
 
   res.status(201).json({
     user: { email: result.email, subscription: result.subscription },
@@ -38,8 +62,13 @@ const singUpController = async (req, res) => {
 const loginController = async (req, res) => {
   const { email, password } = req.body;
   const user = await findUser({ email });
+
   if (!user) {
     throw HttpError(401, "Email or password is wrong");
+  }
+
+  if (!user.verify) {
+    throw HttpError(401, "Email not verify");
   }
 
   const comparePass = await bcrypt.compare(password, user.password);
@@ -140,6 +169,45 @@ const refreshController = async (req, res) => {
   });
 };
 
+const verifyController = async (req, res) => {
+  const { verificationCode } = req.params;
+
+  const user = await findUser({ verificationCode });
+  if (!user) {
+    throw HttpError(404, "User not found");
+  }
+
+  await verifyUser(user._id);
+
+  res.json({
+    message: "Verify success",
+  });
+};
+
+const resendVerifyEmailController = async (req, res) => {
+  const { email } = req.body;
+  const user = await findUser({ email });
+  if (!user) {
+    throw HttpError(404, "Email not found");
+  }
+
+  if (user.verify) {
+    throw HttpError(404, "Email already verify");
+  }
+
+  const verifyEmail = {
+    to: email,
+    subject: "Verify email",
+    html: `<a target="_blank" href="${BASE_URL}/api/users/verify/${user.verificationCode}">Click verify email</a>`,
+  };
+
+  await sendEmail(verifyEmail);
+
+  res.json({
+    message: "Email send success",
+  });
+};
+
 module.exports = {
   singUpController: ctrlWrapper(singUpController),
   loginController: ctrlWrapper(loginController),
@@ -148,4 +216,6 @@ module.exports = {
   updateSubscriptionController: ctrlWrapper(updateSubscriptionController),
   updateAvatarController: ctrlWrapper(updateAvatarController),
   refreshController: ctrlWrapper(refreshController),
+  verifyController: ctrlWrapper(verifyController),
+  resendVerifyEmailController: ctrlWrapper(resendVerifyEmailController),
 };

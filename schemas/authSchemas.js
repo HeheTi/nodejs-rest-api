@@ -14,4 +14,13 @@ const refreshSchema = Joi.object({
   refreshToken: Joi.string().required(),
 });
 
-module.exports = { authSchema, changeSubscriptionSchema, refreshSchema };
+const resendVerifySchema = Joi.object({
+  email: Joi.string().pattern(EMAIL_REG_EXP).required(),
+});
+
+module.exports = {
+  authSchema,
+  changeSubscriptionSchema,
+  refreshSchema,
+  resendVerifySchema,
+};
